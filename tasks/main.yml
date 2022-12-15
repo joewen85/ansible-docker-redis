@@ -1,0 +1,35 @@
+- name: create data folder
+  shell: mkdir -p /data/redis
+
+- name: create config folder
+  shell: mkdir -p /data/confs/redis
+
+- name: copy redis config
+  template:
+    src: redis.j2
+    dest: /data/confs/redis/redis.conf
+
+- name: call python3
+  shell: rm -rf /usr/bin/python && ln -s /usr/bin/python3 /usr/bin/python
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version|int == 7
+
+- name: create redis service
+  community.docker.docker_container:
+    name: redis_db
+    image: registry.yunzmall.com/yunzhong/shop:redis
+    detach: yes
+    restart_policy: always
+    networks:
+      - name: yzshop
+    network_mode: yzshop
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /data/confs/redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - /data/redis:/data
+
+- name: recovery python2
+  shell: rm -rf /usr/bin/python && ln -s /usr/bin/python2 /usr/bin/python
+  when: ansible_distribution == "CentOS" and ansible_distribution_major_version|int == 7
